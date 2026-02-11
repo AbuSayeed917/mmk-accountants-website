@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Hide top bar when scrolling down past it
         if (topBar) {
-            if (scrollY > 36) {
+            if (scrollY > 40) {
                 topBar.classList.add('hidden');
             } else {
                 topBar.classList.remove('hidden');

@@ -54,7 +54,7 @@ body {
     background: var(--bg);
     line-height: 1.6;
     font-size: 16px;
-    padding-top: 36px;
+    padding-top: 40px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
@@ -134,7 +134,7 @@ em { font-family: var(--font-display); font-style: italic; color: var(--accent);
     background: var(--primary);
     color: rgba(255,255,255,0.7);
     font-size: 0.78rem; font-weight: 500;
-    padding: 8px 0;
+    padding: 10px 0;
     position: fixed; top: 0; left: 0; right: 0; z-index: 1001;
     border-bottom: 1px solid rgba(255,255,255,0.08);
     transition: transform 0.4s var(--ease), opacity 0.4s var(--ease);
@@ -177,7 +177,7 @@ em { font-family: var(--font-display); font-style: italic; color: var(--accent);
 
 /* --- Navigation --- */
 #header {
-    position: fixed; top: 36px; left: 0; right: 0; z-index: 1000;
+    position: fixed; top: 40px; left: 0; right: 0; z-index: 1000;
     padding: 8px 0;
     transition: all 0.5s var(--ease);
 }
@@ -1662,7 +1662,7 @@ a.cta-info-value:hover { color: var(--accent); }
     .nav-links, .nav-cta { display: none; }
     .mobile-toggle { display: flex; }
     .nav-links {
-        position: fixed; top: 108px; left: 0; right: 0;
+        position: fixed; top: 112px; left: 0; right: 0;
         background: rgba(255,255,255,0.98); backdrop-filter: blur(20px);
         flex-direction: column; padding: 16px 24px; gap: 0;
         border-bottom: 1px solid var(--border);
