@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         updateFollower();
 
-        const hoverElements = document.querySelectorAll('a, button, [data-magnetic], .service-card, .specialist-item, .testimonial-card');
+        const hoverElements = document.querySelectorAll('a, button, .service-card, .specialist-item, .testimonial-card');
         hoverElements.forEach(el => {
             el.addEventListener('mouseenter', () => {
                 cursor.classList.add('hover');
@@ -267,22 +267,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Magnetic buttons ---
-    if (!isMobile && !prefersReducedMotion) {
-        document.querySelectorAll('[data-magnetic]').forEach(btn => {
-            btn.addEventListener('mousemove', (e) => {
-                const rect = btn.getBoundingClientRect();
-                const x = e.clientX - rect.left - rect.width / 2;
-                const y = e.clientY - rect.top - rect.height / 2;
-                btn.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px)`;
-            });
-            btn.addEventListener('mouseleave', () => {
-                btn.style.transform = '';
-                btn.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
-                setTimeout(() => { btn.style.transition = ''; }, 500);
-            });
-        });
-    }
 
     // --- Parallax on scroll ---
     if (!isMobile && !prefersReducedMotion) {
