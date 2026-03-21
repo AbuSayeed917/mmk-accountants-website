@@ -5,6 +5,13 @@
 document.addEventListener('DOMContentLoaded', () => {
     const isMobile = window.innerWidth < 768;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const API_BASE = (() => {
+        if (window.MMK_API_BASE) return window.MMK_API_BASE;
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            return 'http://localhost:4000/api/v1';
+        }
+        return '/api/v1';
+    })();
 
     // --- Preloader ---
     const preloader = document.getElementById('preloader');
@@ -133,13 +140,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Quote form submission
     const quoteForm = document.getElementById('quoteForm');
     if (quoteForm) {
-        quoteForm.addEventListener('submit', (e) => {
+        quoteForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = quoteForm.querySelector('button[type="submit"]');
             const origText = btn.innerHTML;
             btn.innerHTML = '<span class="btn-text">Sending...</span>';
             btn.disabled = true;
-            setTimeout(() => {
+
+            const formData = new FormData(quoteForm);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                await apiPost('/inquiries/quote', data);
                 btn.innerHTML = '<span class="btn-text">Quote Requested!</span>';
                 setTimeout(() => {
                     quoteForm.reset();
@@ -147,7 +159,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn.disabled = false;
                     if (quoteModal) { quoteModal.classList.remove('active'); document.body.style.overflow = ''; }
                 }, 1500);
-            }, 1200);
+            } catch (error) {
+                showInlineMessage(quoteForm, error.message || 'Unable to submit your request. Please try again.', 'error');
+                btn.innerHTML = origText;
+                btn.disabled = false;
+            }
         });
     }
 
@@ -290,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Contact form ---
     const contactForm = document.getElementById('contactForm');
     if (contactForm) {
-        contactForm.addEventListener('submit', (e) => {
+        contactForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(contactForm);
             const data = Object.fromEntries(formData.entries());
@@ -302,35 +318,71 @@ document.addEventListener('DOMContentLoaded', () => {
             const original = submitBtn.innerHTML;
             submitBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10"/></svg><span class="btn-text">Sending...</span>';
             submitBtn.disabled = true;
-            setTimeout(() => {
+
+            try {
+                await apiPost('/inquiries/contact', data);
                 showFormMessage("Thank you! We'll be in touch within 2 hours.", 'success');
                 contactForm.reset();
                 submitBtn.innerHTML = original;
                 submitBtn.disabled = false;
-            }, 1800);
+            } catch (error) {
+                showFormMessage(error.message || 'Unable to send your message right now. Please try again shortly.', 'error');
+                submitBtn.innerHTML = original;
+                submitBtn.disabled = false;
+            }
         });
     }
 
-    function showFormMessage(message, type) {
-        const existing = contactForm.querySelector('.form-message');
+    async function apiPost(path, payload) {
+        const response = await fetch(`${API_BASE}${path}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const body = await response.json().catch(() => null);
+        if (!response.ok || !body || body.success === false) {
+            throw new Error(body?.error?.message || 'Request failed');
+        }
+        return body;
+    }
+
+    function showInlineMessage(form, message, type) {
+        const existing = form.querySelector('.form-message');
         if (existing) existing.remove();
         const el = document.createElement('div');
         el.className = 'form-message';
         el.textContent = message;
         Object.assign(el.style, {
-            padding: '14px 18px', borderRadius: '12px', marginBottom: '20px',
-            fontSize: '0.9rem', fontWeight: '500',
-            animation: 'fadeSlideIn 0.5s cubic-bezier(0.16,1,0.3,1)',
+            padding: '12px 16px',
+            borderRadius: '10px',
+            marginBottom: '16px',
+            fontSize: '0.9rem',
+            fontWeight: '500',
+            animation: 'fadeSlideIn 0.4s cubic-bezier(0.16,1,0.3,1)',
             ...(type === 'success'
                 ? { background: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0' }
                 : { background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }
             )
         });
-        contactForm.querySelector('h3').insertAdjacentElement('afterend', el);
+
+        const heading = form.querySelector('h3');
+        if (heading) {
+            heading.insertAdjacentElement('afterend', el);
+        } else {
+            form.prepend(el);
+        }
+
         setTimeout(() => {
             el.style.animation = 'fadeSlideOut 0.4s forwards';
             setTimeout(() => el.remove(), 400);
         }, 5000);
+    }
+
+    function showFormMessage(message, type) {
+        showInlineMessage(contactForm, message, type);
     }
 
     // --- Back to Top ---
@@ -368,15 +420,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Newsletter form ---
     document.querySelectorAll('.newsletter-form').forEach(form => {
-        form.addEventListener('submit', (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = form.querySelector('input[type="email"]').value;
-            if (email) {
-                const btn = form.querySelector('button');
+            const emailInput = form.querySelector('input[type="email"]');
+            const btn = form.querySelector('button');
+            const email = emailInput.value;
+
+            if (!email) return;
+
+            const originalText = btn.textContent;
+            btn.textContent = 'Subscribing...';
+            btn.disabled = true;
+
+            try {
+                await apiPost('/newsletter/subscribe', {
+                    email,
+                    sourcePage: window.location.pathname
+                });
+
                 btn.textContent = 'Subscribed!';
                 btn.style.background = '#34d399';
-                form.querySelector('input').value = '';
-                setTimeout(() => { btn.textContent = 'Subscribe'; btn.style.background = ''; }, 3000);
+                emailInput.value = '';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                    btn.disabled = false;
+                }, 3000);
+            } catch (error) {
+                btn.textContent = 'Try Again';
+                btn.style.background = '#ef4444';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                    btn.disabled = false;
+                }, 3000);
             }
         });
     });
