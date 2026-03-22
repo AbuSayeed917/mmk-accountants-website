@@ -439,8 +439,18 @@
         return PAGE_KIND === 'dashboard';
     }
 
+    function normalizeRouteName(value) {
+        const lastSegment = String(value || '')
+            .split('/')
+            .pop()
+            ?.split('?')[0]
+            ?.split('#')[0] || '';
+
+        return lastSegment.replace(/\.html$/i, '');
+    }
+
     function getCurrentPage() {
-        return window.location.pathname.split('/').pop() || ROUTES.signin;
+        return normalizeRouteName(window.location.pathname) || normalizeRouteName(ROUTES.signin);
     }
 
     function getDashboardRouteForRole(role) {
@@ -471,14 +481,14 @@
     function routeAuthenticatedUserIfNeeded() {
         const destination = getDashboardRouteForRole(state.user?.role);
         if (!destination) return false;
-        if (getCurrentPage() === destination) return false;
+        if (getCurrentPage() === normalizeRouteName(destination)) return false;
         window.location.replace(destination);
         return true;
     }
 
     function redirectToSignin(message = '', kind = 'ok') {
         if (message) queueFlash(message, kind);
-        if (getCurrentPage() === ROUTES.signin) return false;
+        if (getCurrentPage() === normalizeRouteName(ROUTES.signin)) return false;
         window.location.replace(ROUTES.signin);
         return true;
     }
