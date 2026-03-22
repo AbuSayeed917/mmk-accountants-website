@@ -1,5 +1,25 @@
 (() => {
     const PASSWORD_AUTO_HIDE_MS = 7000;
+    const PAGE_KIND = document.body?.dataset?.pageKind === 'signin' ? 'signin' : 'dashboard';
+    const DASHBOARD_MODE = document.body?.dataset?.dashboardMode === 'staff' ? 'staff' : 'admin';
+    const ROUTES = {
+        signin: '/admin',
+        admin: '/admin-dashboard',
+        staff: '/staff-dashboard'
+    };
+    const FLASH_KEY = 'mmk_admin_redirect_flash_v1';
+    const DASHBOARD_BRANDING = {
+        admin: {
+            title: 'MMK Admin Dashboard',
+            heading: 'Admin Dashboard',
+            viewsLabel: 'Admin views'
+        },
+        staff: {
+            title: 'MMK Staff Dashboard',
+            heading: 'Staff Dashboard',
+            viewsLabel: 'Staff views'
+        }
+    };
     const API_BASE = (() => {
         if (window.MMK_API_BASE) return window.MMK_API_BASE;
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -80,148 +100,156 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         cacheElements();
+        updateDashboardBranding();
         bindEvents();
+        flushQueuedFlash();
         restoreSession();
     });
 
     function cacheElements() {
-        els.flash = getEl('flashMessage');
-        els.authSection = getEl('authSection');
-        els.appSection = getEl('appSection');
-        els.loginForm = getEl('loginForm');
-        els.loginIdentifier = getEl('loginIdentifier');
-        els.loginPassword = getEl('loginPassword');
-        els.loginBtn = getEl('loginBtn');
-        els.authError = getEl('authError');
-        els.loginVerifySection = getEl('loginVerifySection');
-        els.loginVerifyForm = getEl('loginVerifyForm');
-        els.loginVerifyHint = getEl('loginVerifyHint');
-        els.loginVerifyCode = getEl('loginVerifyCode');
-        els.loginVerifyBtn = getEl('loginVerifyBtn');
-        els.loginVerifyCancelBtn = getEl('loginVerifyCancelBtn');
-        els.loginVerifyError = getEl('loginVerifyError');
-        els.forgotPasswordToggle = getEl('forgotPasswordToggle');
-        els.forgotPasswordSection = getEl('forgotPasswordSection');
-        els.forgotRequestForm = getEl('forgotRequestForm');
-        els.forgotIdentifier = getEl('forgotIdentifier');
-        els.forgotRequestBtn = getEl('forgotRequestBtn');
-        els.forgotHint = getEl('forgotHint');
-        els.forgotResetForm = getEl('forgotResetForm');
-        els.forgotCode = getEl('forgotCode');
-        els.forgotNewPassword = getEl('forgotNewPassword');
-        els.forgotResetBtn = getEl('forgotResetBtn');
-        els.forgotCancelBtn = getEl('forgotCancelBtn');
-        els.forgotError = getEl('forgotError');
-        els.registerForm = getEl('registerForm');
-        els.registerName = getEl('registerName');
-        els.registerEmail = getEl('registerEmail');
-        els.registerPhone = getEl('registerPhone');
-        els.registerPassword = getEl('registerPassword');
-        els.registerRole = getEl('registerRole');
-        els.registerBtn = getEl('registerBtn');
-        els.registerError = getEl('registerError');
-        els.registerVerifySection = getEl('registerVerifySection');
-        els.registerVerifyForm = getEl('registerVerifyForm');
-        els.registerVerifyHint = getEl('registerVerifyHint');
-        els.registerVerifyCode = getEl('registerVerifyCode');
-        els.registerVerifyBtn = getEl('registerVerifyBtn');
-        els.registerVerifyCancelBtn = getEl('registerVerifyCancelBtn');
-        els.registerVerifyError = getEl('registerVerifyError');
-        els.logoutBtn = getEl('logoutBtn');
-        els.refreshAllBtn = getEl('refreshAllBtn');
+        els.flash = getOptionalEl('flashMessage');
+        els.authSection = getOptionalEl('authSection');
+        els.appSection = getOptionalEl('appSection');
+        els.loginForm = getOptionalEl('loginForm');
+        els.loginIdentifier = getOptionalEl('loginIdentifier');
+        els.loginPassword = getOptionalEl('loginPassword');
+        els.loginBtn = getOptionalEl('loginBtn');
+        els.authError = getOptionalEl('authError');
+        els.loginVerifySection = getOptionalEl('loginVerifySection');
+        els.loginVerifyForm = getOptionalEl('loginVerifyForm');
+        els.loginVerifyHint = getOptionalEl('loginVerifyHint');
+        els.loginVerifyCode = getOptionalEl('loginVerifyCode');
+        els.loginVerifyBtn = getOptionalEl('loginVerifyBtn');
+        els.loginVerifyCancelBtn = getOptionalEl('loginVerifyCancelBtn');
+        els.loginVerifyError = getOptionalEl('loginVerifyError');
+        els.forgotPasswordToggle = getOptionalEl('forgotPasswordToggle');
+        els.forgotPasswordSection = getOptionalEl('forgotPasswordSection');
+        els.forgotRequestForm = getOptionalEl('forgotRequestForm');
+        els.forgotIdentifier = getOptionalEl('forgotIdentifier');
+        els.forgotRequestBtn = getOptionalEl('forgotRequestBtn');
+        els.forgotHint = getOptionalEl('forgotHint');
+        els.forgotResetForm = getOptionalEl('forgotResetForm');
+        els.forgotCode = getOptionalEl('forgotCode');
+        els.forgotNewPassword = getOptionalEl('forgotNewPassword');
+        els.forgotResetBtn = getOptionalEl('forgotResetBtn');
+        els.forgotCancelBtn = getOptionalEl('forgotCancelBtn');
+        els.forgotError = getOptionalEl('forgotError');
+        els.registerForm = getOptionalEl('registerForm');
+        els.registerName = getOptionalEl('registerName');
+        els.registerEmail = getOptionalEl('registerEmail');
+        els.registerPhone = getOptionalEl('registerPhone');
+        els.registerPassword = getOptionalEl('registerPassword');
+        els.registerRole = getOptionalEl('registerRole');
+        els.registerBtn = getOptionalEl('registerBtn');
+        els.registerError = getOptionalEl('registerError');
+        els.registerVerifySection = getOptionalEl('registerVerifySection');
+        els.registerVerifyForm = getOptionalEl('registerVerifyForm');
+        els.registerVerifyHint = getOptionalEl('registerVerifyHint');
+        els.registerVerifyCode = getOptionalEl('registerVerifyCode');
+        els.registerVerifyBtn = getOptionalEl('registerVerifyBtn');
+        els.registerVerifyCancelBtn = getOptionalEl('registerVerifyCancelBtn');
+        els.registerVerifyError = getOptionalEl('registerVerifyError');
+        els.logoutBtn = getOptionalEl('logoutBtn');
+        els.refreshAllBtn = getOptionalEl('refreshAllBtn');
+        els.dashboardHeading = document.querySelector('.admin-brand-wrap h1');
+        els.viewsNav = document.querySelector('.view-tabs');
 
-        els.currentUserName = getEl('currentUserName');
-        els.currentUserEmail = getEl('currentUserEmail');
-        els.currentUserRole = getEl('currentUserRole');
+        els.currentUserName = getOptionalEl('currentUserName');
+        els.currentUserEmail = getOptionalEl('currentUserEmail');
+        els.currentUserRole = getOptionalEl('currentUserRole');
 
         els.tabs = Array.from(document.querySelectorAll('.view-tab'));
         els.panels = Array.from(document.querySelectorAll('.view-panel'));
 
-        els.overviewDays = getEl('overviewDays');
-        els.overviewReload = getEl('overviewReload');
-        els.kpiTotalInquiries = getEl('kpiTotalInquiries');
-        els.kpiNewInquiries = getEl('kpiNewInquiries');
-        els.kpiInProgressInquiries = getEl('kpiInProgressInquiries');
-        els.kpiResolvedInquiries = getEl('kpiResolvedInquiries');
-        els.kpiRecentInquiries = getEl('kpiRecentInquiries');
-        els.kpiActiveSubscribers = getEl('kpiActiveSubscribers');
-        els.overviewBySource = getEl('overviewBySource');
-        els.overviewLatestBody = getEl('overviewLatestBody');
+        els.overviewDays = getOptionalEl('overviewDays');
+        els.overviewReload = getOptionalEl('overviewReload');
+        els.kpiTotalInquiries = getOptionalEl('kpiTotalInquiries');
+        els.kpiNewInquiries = getOptionalEl('kpiNewInquiries');
+        els.kpiInProgressInquiries = getOptionalEl('kpiInProgressInquiries');
+        els.kpiResolvedInquiries = getOptionalEl('kpiResolvedInquiries');
+        els.kpiRecentInquiries = getOptionalEl('kpiRecentInquiries');
+        els.kpiActiveSubscribers = getOptionalEl('kpiActiveSubscribers');
+        els.overviewBySource = getOptionalEl('overviewBySource');
+        els.overviewLatestBody = getOptionalEl('overviewLatestBody');
 
-        els.inquiriesFilters = getEl('inquiriesFilters');
-        els.inquiriesSearch = getEl('inquiriesSearch');
-        els.inquiriesStatus = getEl('inquiriesStatus');
-        els.inquiriesSource = getEl('inquiriesSource');
-        els.inquiriesBody = getEl('inquiriesBody');
-        els.inquiriesPrev = getEl('inquiriesPrev');
-        els.inquiriesNext = getEl('inquiriesNext');
-        els.inquiriesPagination = getEl('inquiriesPagination');
+        els.inquiriesFilters = getOptionalEl('inquiriesFilters');
+        els.inquiriesSearch = getOptionalEl('inquiriesSearch');
+        els.inquiriesStatus = getOptionalEl('inquiriesStatus');
+        els.inquiriesSource = getOptionalEl('inquiriesSource');
+        els.inquiriesBody = getOptionalEl('inquiriesBody');
+        els.inquiriesPrev = getOptionalEl('inquiriesPrev');
+        els.inquiriesNext = getOptionalEl('inquiriesNext');
+        els.inquiriesPagination = getOptionalEl('inquiriesPagination');
 
-        els.detailEmpty = getEl('detailEmpty');
-        els.detailContent = getEl('detailContent');
-        els.detailId = getEl('detailId');
-        els.detailName = getEl('detailName');
-        els.detailEmail = getEl('detailEmail');
-        els.detailPhone = getEl('detailPhone');
-        els.detailService = getEl('detailService');
-        els.detailMessage = getEl('detailMessage');
-        els.detailStatus = getEl('detailStatus');
-        els.detailAssignee = getEl('detailAssignee');
-        els.detailSave = getEl('detailSave');
-        els.detailNotes = getEl('detailNotes');
-        els.detailNoteInput = getEl('detailNoteInput');
-        els.detailNoteAdd = getEl('detailNoteAdd');
+        els.detailEmpty = getOptionalEl('detailEmpty');
+        els.detailContent = getOptionalEl('detailContent');
+        els.detailId = getOptionalEl('detailId');
+        els.detailName = getOptionalEl('detailName');
+        els.detailEmail = getOptionalEl('detailEmail');
+        els.detailPhone = getOptionalEl('detailPhone');
+        els.detailService = getOptionalEl('detailService');
+        els.detailMessage = getOptionalEl('detailMessage');
+        els.detailStatus = getOptionalEl('detailStatus');
+        els.detailAssignee = getOptionalEl('detailAssignee');
+        els.detailSave = getOptionalEl('detailSave');
+        els.detailNotes = getOptionalEl('detailNotes');
+        els.detailNoteInput = getOptionalEl('detailNoteInput');
+        els.detailNoteAdd = getOptionalEl('detailNoteAdd');
 
-        els.subscribersFilters = getEl('subscribersFilters');
-        els.subsSearch = getEl('subsSearch');
-        els.subsStatus = getEl('subsStatus');
-        els.subsBody = getEl('subsBody');
-        els.subsPrev = getEl('subsPrev');
-        els.subsNext = getEl('subsNext');
-        els.subsPagination = getEl('subsPagination');
+        els.subscribersFilters = getOptionalEl('subscribersFilters');
+        els.subsSearch = getOptionalEl('subsSearch');
+        els.subsStatus = getOptionalEl('subsStatus');
+        els.subsBody = getOptionalEl('subsBody');
+        els.subsPrev = getOptionalEl('subsPrev');
+        els.subsNext = getOptionalEl('subsNext');
+        els.subsPagination = getOptionalEl('subsPagination');
 
-        els.usersFilters = getEl('usersFilters');
-        els.usersSearch = getEl('usersSearch');
-        els.usersRole = getEl('usersRole');
-        els.usersIsActive = getEl('usersIsActive');
-        els.createUserForm = getEl('createUserForm');
-        els.createUserName = getEl('createUserName');
-        els.createUserEmail = getEl('createUserEmail');
-        els.createUserPhone = getEl('createUserPhone');
-        els.createUserPassword = getEl('createUserPassword');
-        els.createUserRole = getEl('createUserRole');
-        els.createUserActive = getEl('createUserActive');
-        els.usersBody = getEl('usersBody');
-        els.usersPrev = getEl('usersPrev');
-        els.usersNext = getEl('usersNext');
-        els.usersPagination = getEl('usersPagination');
+        els.usersFilters = getOptionalEl('usersFilters');
+        els.usersSearch = getOptionalEl('usersSearch');
+        els.usersRole = getOptionalEl('usersRole');
+        els.usersIsActive = getOptionalEl('usersIsActive');
+        els.createUserForm = getOptionalEl('createUserForm');
+        els.createUserName = getOptionalEl('createUserName');
+        els.createUserEmail = getOptionalEl('createUserEmail');
+        els.createUserPhone = getOptionalEl('createUserPhone');
+        els.createUserPassword = getOptionalEl('createUserPassword');
+        els.createUserRole = getOptionalEl('createUserRole');
+        els.createUserActive = getOptionalEl('createUserActive');
+        els.usersBody = getOptionalEl('usersBody');
+        els.usersPrev = getOptionalEl('usersPrev');
+        els.usersNext = getOptionalEl('usersNext');
+        els.usersPagination = getOptionalEl('usersPagination');
 
-        els.auditFilters = getEl('auditFilters');
-        els.auditActorId = getEl('auditActorId');
-        els.auditAction = getEl('auditAction');
-        els.auditEntityType = getEl('auditEntityType');
-        els.auditBody = getEl('auditBody');
-        els.auditPrev = getEl('auditPrev');
-        els.auditNext = getEl('auditNext');
-        els.auditPagination = getEl('auditPagination');
+        els.auditFilters = getOptionalEl('auditFilters');
+        els.auditActorId = getOptionalEl('auditActorId');
+        els.auditAction = getOptionalEl('auditAction');
+        els.auditEntityType = getOptionalEl('auditEntityType');
+        els.auditBody = getOptionalEl('auditBody');
+        els.auditPrev = getOptionalEl('auditPrev');
+        els.auditNext = getOptionalEl('auditNext');
+        els.auditPagination = getOptionalEl('auditPagination');
     }
 
     function bindEvents() {
         initializePasswordToggles();
-        els.loginForm.addEventListener('submit', onLoginSubmit);
-        els.loginVerifyForm.addEventListener('submit', onLoginVerifySubmit);
-        els.loginVerifyCancelBtn.addEventListener('click', resetLoginVerification);
-        els.forgotPasswordToggle.addEventListener('click', toggleForgotPasswordSection);
-        els.forgotRequestForm.addEventListener('submit', onForgotRequestSubmit);
-        els.forgotResetForm.addEventListener('submit', onForgotResetSubmit);
-        els.forgotCancelBtn.addEventListener('click', resetForgotPasswordFlow);
-        els.registerForm.addEventListener('submit', onRegisterSubmit);
-        els.registerVerifyForm.addEventListener('submit', onRegisterVerifySubmit);
-        els.registerVerifyCancelBtn.addEventListener('click', resetRegisterVerification);
-        els.logoutBtn.addEventListener('click', onLogout);
-        els.refreshAllBtn.addEventListener('click', async () => {
-            await refreshCurrentView(true);
-        });
+        if (els.loginForm) els.loginForm.addEventListener('submit', onLoginSubmit);
+        if (els.loginVerifyForm) els.loginVerifyForm.addEventListener('submit', onLoginVerifySubmit);
+        if (els.loginVerifyCancelBtn) els.loginVerifyCancelBtn.addEventListener('click', resetLoginVerification);
+        if (els.forgotPasswordToggle) els.forgotPasswordToggle.addEventListener('click', toggleForgotPasswordSection);
+        if (els.forgotRequestForm) els.forgotRequestForm.addEventListener('submit', onForgotRequestSubmit);
+        if (els.forgotResetForm) els.forgotResetForm.addEventListener('submit', onForgotResetSubmit);
+        if (els.forgotCancelBtn) els.forgotCancelBtn.addEventListener('click', resetForgotPasswordFlow);
+        if (hasRegisterFlow()) {
+            els.registerForm.addEventListener('submit', onRegisterSubmit);
+            els.registerVerifyForm.addEventListener('submit', onRegisterVerifySubmit);
+            els.registerVerifyCancelBtn.addEventListener('click', resetRegisterVerification);
+        }
+        if (els.logoutBtn) els.logoutBtn.addEventListener('click', onLogout);
+        if (els.refreshAllBtn) {
+            els.refreshAllBtn.addEventListener('click', async () => {
+                await refreshCurrentView(true);
+            });
+        }
 
         els.tabs.forEach((tab) => {
             tab.addEventListener('click', async () => {
@@ -233,61 +261,71 @@
             });
         });
 
-        els.overviewReload.addEventListener('click', () => loadOverview(true));
-        els.overviewDays.addEventListener('change', () => loadOverview(true));
+        if (els.overviewReload) els.overviewReload.addEventListener('click', () => loadOverview(true));
+        if (els.overviewDays) els.overviewDays.addEventListener('change', () => loadOverview(true));
 
-        els.inquiriesFilters.addEventListener('submit', (event) => {
-            event.preventDefault();
-            state.inquiryFilters.page = 1;
-            state.inquiryFilters.search = els.inquiriesSearch.value.trim();
-            state.inquiryFilters.status = els.inquiriesStatus.value;
-            state.inquiryFilters.source = els.inquiriesSource.value;
-            loadInquiries(true);
-        });
-        els.inquiriesPrev.addEventListener('click', () => changePage('inquiries', -1));
-        els.inquiriesNext.addEventListener('click', () => changePage('inquiries', 1));
-        els.inquiriesBody.addEventListener('click', (event) => {
-            const row = event.target.closest('tr[data-id]');
-            if (!row) return;
-            selectInquiry(row.dataset.id);
-        });
-        els.detailSave.addEventListener('click', onSaveInquiry);
-        els.detailNoteAdd.addEventListener('click', onAddInquiryNote);
+        if (els.inquiriesFilters && els.inquiriesSearch && els.inquiriesStatus && els.inquiriesSource) {
+            els.inquiriesFilters.addEventListener('submit', (event) => {
+                event.preventDefault();
+                state.inquiryFilters.page = 1;
+                state.inquiryFilters.search = els.inquiriesSearch.value.trim();
+                state.inquiryFilters.status = els.inquiriesStatus.value;
+                state.inquiryFilters.source = els.inquiriesSource.value;
+                loadInquiries(true);
+            });
+        }
+        if (els.inquiriesPrev) els.inquiriesPrev.addEventListener('click', () => changePage('inquiries', -1));
+        if (els.inquiriesNext) els.inquiriesNext.addEventListener('click', () => changePage('inquiries', 1));
+        if (els.inquiriesBody) {
+            els.inquiriesBody.addEventListener('click', (event) => {
+                const row = event.target.closest('tr[data-id]');
+                if (!row) return;
+                selectInquiry(row.dataset.id);
+            });
+        }
+        if (els.detailSave) els.detailSave.addEventListener('click', onSaveInquiry);
+        if (els.detailNoteAdd) els.detailNoteAdd.addEventListener('click', onAddInquiryNote);
 
-        els.subscribersFilters.addEventListener('submit', (event) => {
-            event.preventDefault();
-            state.subscribersFilters.page = 1;
-            state.subscribersFilters.search = els.subsSearch.value.trim();
-            state.subscribersFilters.status = els.subsStatus.value;
-            loadSubscribers(true);
-        });
-        els.subsPrev.addEventListener('click', () => changePage('newsletter', -1));
-        els.subsNext.addEventListener('click', () => changePage('newsletter', 1));
-        els.subsBody.addEventListener('click', onSubscribersTableClick);
+        if (els.subscribersFilters && els.subsSearch && els.subsStatus) {
+            els.subscribersFilters.addEventListener('submit', (event) => {
+                event.preventDefault();
+                state.subscribersFilters.page = 1;
+                state.subscribersFilters.search = els.subsSearch.value.trim();
+                state.subscribersFilters.status = els.subsStatus.value;
+                loadSubscribers(true);
+            });
+        }
+        if (els.subsPrev) els.subsPrev.addEventListener('click', () => changePage('newsletter', -1));
+        if (els.subsNext) els.subsNext.addEventListener('click', () => changePage('newsletter', 1));
+        if (els.subsBody) els.subsBody.addEventListener('click', onSubscribersTableClick);
 
-        els.usersFilters.addEventListener('submit', (event) => {
-            event.preventDefault();
-            state.usersFilters.page = 1;
-            state.usersFilters.search = els.usersSearch.value.trim();
-            state.usersFilters.role = els.usersRole.value;
-            state.usersFilters.isActive = els.usersIsActive.value;
-            loadUsers(true);
-        });
-        els.usersPrev.addEventListener('click', () => changePage('users', -1));
-        els.usersNext.addEventListener('click', () => changePage('users', 1));
-        els.usersBody.addEventListener('click', onUsersTableClick);
-        els.createUserForm.addEventListener('submit', onCreateUserSubmit);
+        if (els.usersFilters && els.usersSearch && els.usersRole && els.usersIsActive) {
+            els.usersFilters.addEventListener('submit', (event) => {
+                event.preventDefault();
+                state.usersFilters.page = 1;
+                state.usersFilters.search = els.usersSearch.value.trim();
+                state.usersFilters.role = els.usersRole.value;
+                state.usersFilters.isActive = els.usersIsActive.value;
+                loadUsers(true);
+            });
+        }
+        if (els.usersPrev) els.usersPrev.addEventListener('click', () => changePage('users', -1));
+        if (els.usersNext) els.usersNext.addEventListener('click', () => changePage('users', 1));
+        if (els.usersBody) els.usersBody.addEventListener('click', onUsersTableClick);
+        if (els.createUserForm) els.createUserForm.addEventListener('submit', onCreateUserSubmit);
 
-        els.auditFilters.addEventListener('submit', (event) => {
-            event.preventDefault();
-            state.auditFilters.page = 1;
-            state.auditFilters.actorId = els.auditActorId.value.trim();
-            state.auditFilters.action = els.auditAction.value.trim();
-            state.auditFilters.entityType = els.auditEntityType.value.trim();
-            loadAuditLogs(true);
-        });
-        els.auditPrev.addEventListener('click', () => changePage('audit', -1));
-        els.auditNext.addEventListener('click', () => changePage('audit', 1));
+        if (els.auditFilters && els.auditActorId && els.auditAction && els.auditEntityType) {
+            els.auditFilters.addEventListener('submit', (event) => {
+                event.preventDefault();
+                state.auditFilters.page = 1;
+                state.auditFilters.actorId = els.auditActorId.value.trim();
+                state.auditFilters.action = els.auditAction.value.trim();
+                state.auditFilters.entityType = els.auditEntityType.value.trim();
+                loadAuditLogs(true);
+            });
+        }
+        if (els.auditPrev) els.auditPrev.addEventListener('click', () => changePage('audit', -1));
+        if (els.auditNext) els.auditNext.addEventListener('click', () => changePage('audit', 1));
     }
 
     function initializePasswordToggles() {
@@ -369,7 +407,95 @@
         return el;
     }
 
+    function getOptionalEl(id) {
+        return document.getElementById(id);
+    }
+
+    function hasRegisterFlow() {
+        return Boolean(
+            els.registerForm &&
+            els.registerName &&
+            els.registerEmail &&
+            els.registerPhone &&
+            els.registerPassword &&
+            els.registerRole &&
+            els.registerBtn &&
+            els.registerError &&
+            els.registerVerifySection &&
+            els.registerVerifyForm &&
+            els.registerVerifyHint &&
+            els.registerVerifyCode &&
+            els.registerVerifyBtn &&
+            els.registerVerifyCancelBtn &&
+            els.registerVerifyError
+        );
+    }
+
+    function isSigninPage() {
+        return PAGE_KIND === 'signin';
+    }
+
+    function isDashboardPage() {
+        return PAGE_KIND === 'dashboard';
+    }
+
+    function normalizeRouteName(value) {
+        const normalizedValue = String(value || '').replace(/\/+$/, '');
+        const lastSegment = normalizedValue
+            .split('/')
+            .pop()
+            ?.split('?')[0]
+            ?.split('#')[0] || '';
+
+        return lastSegment.replace(/\.html$/i, '');
+    }
+
+    function getCurrentPage() {
+        return normalizeRouteName(window.location.pathname) || normalizeRouteName(ROUTES.signin);
+    }
+
+    function getDashboardRouteForRole(role) {
+        if (role === 'ADMIN') return ROUTES.admin;
+        if (role === 'STAFF') return ROUTES.staff;
+        return ROUTES.signin;
+    }
+
+    function queueFlash(message, kind = 'ok') {
+        if (!message) return;
+        sessionStorage.setItem(FLASH_KEY, JSON.stringify({ message, kind }));
+    }
+
+    function flushQueuedFlash() {
+        const raw = sessionStorage.getItem(FLASH_KEY);
+        if (!raw) return;
+        sessionStorage.removeItem(FLASH_KEY);
+        try {
+            const payload = JSON.parse(raw);
+            if (payload?.message) {
+                showFlash(payload.message, payload.kind || 'ok');
+            }
+        } catch (_error) {
+            // Ignore corrupted flash payloads.
+        }
+    }
+
+    function routeAuthenticatedUserIfNeeded() {
+        const destination = getDashboardRouteForRole(state.user?.role);
+        if (!destination) return false;
+        if (getCurrentPage() === normalizeRouteName(destination)) return false;
+        window.location.replace(destination);
+        return true;
+    }
+
+    function redirectToSignin(message = '', kind = 'ok') {
+        if (message) queueFlash(message, kind);
+        if (getCurrentPage() === normalizeRouteName(ROUTES.signin)) return false;
+        window.location.replace(ROUTES.signin);
+        return true;
+    }
+
     function showFlash(message, kind = 'ok', persistMs = 4200) {
+        if (!els.flash) return;
         els.flash.textContent = message;
         els.flash.classList.remove('ok', 'err');
         els.flash.classList.add(kind === 'err' ? 'err' : 'ok');
@@ -383,10 +509,29 @@
     }
 
     function setAuthVisible(isAuthenticated) {
-        els.authSection.classList.toggle('is-hidden', isAuthenticated);
-        els.appSection.classList.toggle('is-hidden', !isAuthenticated);
-        els.logoutBtn.disabled = !isAuthenticated;
-        els.refreshAllBtn.disabled = !isAuthenticated;
+        if (els.authSection) els.authSection.classList.toggle('is-hidden', isAuthenticated);
+        if (els.appSection) els.appSection.classList.toggle('is-hidden', !isAuthenticated);
+        if (els.logoutBtn) els.logoutBtn.disabled = !isAuthenticated;
+        if (els.refreshAllBtn) els.refreshAllBtn.disabled = !isAuthenticated;
+    }
+
+    function getEffectiveDashboardMode() {
+        if (state.user?.role === 'STAFF') {
+            return 'staff';
+        }
+        return DASHBOARD_MODE;
+    }
+
+    function updateDashboardBranding() {
+        if (!isDashboardPage()) return;
+        const branding = DASHBOARD_BRANDING[getEffectiveDashboardMode()] || DASHBOARD_BRANDING.admin;
+        document.title = branding.title;
+        if (els.dashboardHeading) {
+            els.dashboardHeading.textContent = branding.heading;
+        }
+        if (els.viewsNav) {
+            els.viewsNav.setAttribute('aria-label', branding.viewsLabel);
+        }
     }
 
     async function onLoginSubmit(event) {
@@ -459,7 +604,6 @@
             setSession(body.data);
             resetLoginVerification();
             await bootstrapAuthenticated();
-            showFlash('Signed in successfully.');
         } catch (error) {
             els.loginVerifyError.textContent = error.message || 'Verification failed.';
         } finally {
@@ -468,6 +612,7 @@
     }
 
     async function onRegisterSubmit(event) {
+        if (!hasRegisterFlow()) return;
         event.preventDefault();
         els.registerError.textContent = '';
         els.registerVerifyError.textContent = '';
@@ -513,6 +658,7 @@
     }
 
     async function onRegisterVerifySubmit(event) {
+        if (!hasRegisterFlow()) return;
         event.preventDefault();
         els.registerVerifyError.textContent = '';
 
@@ -543,7 +689,6 @@
             setSession(body.data);
             resetRegisterVerification();
             await bootstrapAuthenticated();
-            showFlash('Account created and signed in.');
             els.registerForm.reset();
             els.registerRole.value = 'STAFF';
             resetPasswordToggles();
@@ -666,6 +811,9 @@
 
     function resetLoginVerification() {
         state.authChallenges.login = null;
+        if (!els.loginVerifySection || !els.loginVerifyHint || !els.loginVerifyError || !els.loginVerifyForm || !els.loginForm) {
+            return;
+        }
         els.loginVerifySection.classList.add('is-hidden');
         els.loginVerifyHint.textContent = '';
         els.loginVerifyError.textContent = '';
@@ -676,6 +824,7 @@
 
     function resetRegisterVerification() {
         state.authChallenges.register = null;
+        if (!hasRegisterFlow()) return;
         els.registerVerifySection.classList.add('is-hidden');
         els.registerVerifyHint.textContent = '';
         els.registerVerifyError.textContent = '';
@@ -686,6 +835,9 @@
 
     function resetForgotPasswordFlow() {
         state.authChallenges.passwordReset = null;
+        if (!els.forgotPasswordSection || !els.forgotPasswordToggle || !els.forgotHint || !els.forgotError || !els.forgotRequestForm || !els.forgotResetForm) {
+            return;
+        }
         els.forgotPasswordSection.classList.add('is-hidden');
         els.forgotPasswordToggle.textContent = 'Forgot password?';
         els.forgotHint.textContent = '';
@@ -708,8 +860,7 @@
             // Clear local session regardless.
         }
         clearSession();
-        resetUiForLoggedOut();
-        showFlash('Logged out.', 'ok', 2500);
+        resetUiForLoggedOut('Logged out.', 'ok');
     }
 
     function setSession(payload) {
@@ -738,6 +889,10 @@
     async function restoreSession() {
         const raw = sessionStorage.getItem(SESSION_KEY);
         if (!raw) {
+            if (isDashboardPage()) {
+                redirectToSignin();
+                return;
+            }
             setAuthVisible(false);
             return;
         }
@@ -761,30 +916,27 @@
             const me = await getMe();
             state.user = me;
             persistSession();
+            if (routeAuthenticatedUserIfNeeded()) return;
+            if (!isDashboardPage()) return;
             setAuthVisible(true);
             updateSessionBar();
             applyRoleAccess();
             await loadAssignableUsers();
             await refreshCurrentView(true);
-        } catch (error) {
+        } catch (_error) {
             clearSession();
+            if (isDashboardPage()) {
+                resetUiForLoggedOut('Session expired. Please sign in again.', 'err');
+                return;
+            }
             resetUiForLoggedOut();
-            els.authError.textContent = 'Session expired. Please sign in again.';
+            if (els.authError) {
+                els.authError.textContent = 'Session expired. Please sign in again.';
+            }
         }
     }
 
-    function resetUiForLoggedOut() {
-        setAuthVisible(false);
-        els.currentUserName.textContent = 'Not signed in';
-        els.currentUserEmail.textContent = '';
-        els.currentUserRole.textContent = 'GUEST';
-        els.authError.textContent = '';
-        els.registerError.textContent = '';
-        resetLoginVerification();
-        resetRegisterVerification();
-        resetForgotPasswordFlow();
-        resetPasswordToggles();
-
+    function resetUiForLoggedOut(message = '', flashKind = 'err') {
         state.activeView = 'overview';
         state.selectedInquiry = null;
         state.selectedInquiryId = null;
@@ -795,28 +947,48 @@
             users: false,
             audit: false
         };
+
+        setAuthVisible(false);
+        if (isDashboardPage()) {
+            redirectToSignin(message, flashKind);
+            return;
+        }
+
+        updateDashboardBranding();
+        if (els.currentUserName) els.currentUserName.textContent = 'Not signed in';
+        if (els.currentUserEmail) els.currentUserEmail.textContent = '';
+        if (els.currentUserRole) els.currentUserRole.textContent = 'GUEST';
+        if (els.authError) els.authError.textContent = '';
+        if (els.registerError) els.registerError.textContent = '';
+        resetLoginVerification();
+        resetRegisterVerification();
+        resetForgotPasswordFlow();
+        resetPasswordToggles();
         activateView('overview');
         resetInquiryDetail();
     }
 
     function updateSessionBar() {
         const user = state.user;
+        updateDashboardBranding();
+        if (!els.currentUserName || !els.currentUserEmail || !els.currentUserRole) return;
         els.currentUserName.textContent = user?.fullName || 'Unknown User';
         els.currentUserEmail.textContent = user?.email ? `(${user.email})` : '';
         els.currentUserRole.textContent = user?.role || 'UNKNOWN';
     }
 
     function applyRoleAccess() {
-        const admin = isAdmin();
+        if (!isDashboardPage()) return;
+        const admin = canAccessAdminViews();
         const usersTab = els.tabs.find((tab) => tab.dataset.view === 'users');
         const auditTab = els.tabs.find((tab) => tab.dataset.view === 'audit');
         const usersPanel = getPanel('users');
         const auditPanel = getPanel('audit');
 
-        usersTab.classList.toggle('is-hidden', !admin);
-        auditTab.classList.toggle('is-hidden', !admin);
-        usersPanel.classList.toggle('is-hidden', !admin);
-        auditPanel.classList.toggle('is-hidden', !admin);
+        if (usersTab) usersTab.classList.toggle('is-hidden', !admin);
+        if (auditTab) auditTab.classList.toggle('is-hidden', !admin);
+        if (usersPanel) usersPanel.classList.toggle('is-hidden', !admin);
+        if (auditPanel) auditPanel.classList.toggle('is-hidden', !admin);
 
         if (!admin && (state.activeView === 'users' || state.activeView === 'audit')) {
             activateView('overview');
@@ -825,6 +997,10 @@
 
     function isAdmin() {
         return state.user?.role === 'ADMIN';
+    }
+
+    function canAccessAdminViews() {
+        return DASHBOARD_MODE === 'admin' && isAdmin();
     }
 
     function isAdminOnlyView(view) {
@@ -858,10 +1034,10 @@
                 await loadSubscribers(force);
                 break;
             case 'users':
-                if (isAdmin()) await loadUsers(force);
+                if (canAccessAdminViews()) await loadUsers(force);
                 break;
             case 'audit':
-                if (isAdmin()) await loadAuditLogs(force);
+                if (canAccessAdminViews()) await loadAuditLogs(force);
                 break;
             default:
                 break;
@@ -1036,6 +1212,7 @@
     }
 
     function renderAssigneeSelect(selectedUserId) {
+        if (!els.detailAssignee) return;
         const allowAssignment = state.assignableUsers.length > 0;
         let options = '<option value="">Unassigned</option>';
 
@@ -1051,6 +1228,7 @@
     function resetInquiryDetail() {
         state.selectedInquiryId = null;
         state.selectedInquiry = null;
+        if (!els.detailEmpty || !els.detailContent || !els.detailNotes) return;
         els.detailEmpty.classList.remove('is-hidden');
         els.detailContent.classList.add('is-hidden');
         els.detailNotes.innerHTML = '';
@@ -1202,7 +1380,7 @@
     }
 
     async function loadUsers(force = false) {
-        if (!isAdmin()) return;
+        if (!canAccessAdminViews()) return;
         if (!force && state.loaded.users) return;
 
         renderTableLoading(els.usersBody, 6, 'Loading users...');
@@ -1242,6 +1420,7 @@
                 const roleOptions = ['ADMIN', 'STAFF']
                     .map((role) => `<option value="${role}" ${role === user.role ? 'selected' : ''}>${role}</option>`)
                     .join('');
+                const deleteActionLabel = user.isActive ? 'Deactivate' : 'Delete';
                 return `
                     <tr data-id="${escapeHtml(user.id)}">
                         <td>${escapeHtml(user.fullName || '-')}</td>
@@ -1259,7 +1438,7 @@
                         <td>
                             <div class="row-actions">
                                 <button class="btn btn-secondary" data-action="save-user">Save</button>
-                                <button class="btn btn-danger" data-action="delete-user" ${state.user?.id === user.id ? 'disabled' : ''}>Delete</button>
+                                <button class="btn btn-danger" data-action="delete-user" ${state.user?.id === user.id ? 'disabled' : ''}>${deleteActionLabel}</button>
                             </div>
                         </td>
                     </tr>
@@ -1270,7 +1449,7 @@
 
     async function onCreateUserSubmit(event) {
         event.preventDefault();
-        if (!isAdmin()) return;
+        if (!canAccessAdminViews()) return;
 
         const payload = {
             fullName: els.createUserName.value.trim(),
@@ -1307,6 +1486,7 @@
     }
 
     async function onUsersTableClick(event) {
+        if (!canAccessAdminViews()) return;
         const button = event.target.closest('button[data-action]');
         if (!button) return;
 
@@ -1322,23 +1502,31 @@
                 return;
             }
 
+            const isPermanentDelete = !existing.isActive;
             const confirmed = window.confirm(
-                `Delete account for ${existing.fullName || existing.email}? This will deactivate access immediately.`
+                isPermanentDelete
+                    ? `Permanently delete inactive account for ${existing.fullName || existing.email}? This cannot be undone.`
+                    : `Deactivate account for ${existing.fullName || existing.email}? Access will be removed immediately, but the account can still be deleted later once inactive.`
             );
             if (!confirmed) return;
 
-            setButtonLoading(button, true, 'Deleting...');
+            setButtonLoading(button, true, isPermanentDelete ? 'Deleting...' : 'Deactivating...');
             try {
-                await apiRequest(`/users/${encodeURIComponent(userId)}`, {
+                const response = await apiRequest(`/users/${encodeURIComponent(userId)}`, {
                     method: 'DELETE'
                 });
-                showFlash('User account deleted (deactivated).');
+                const outcome = response?.data?.outcome || (isPermanentDelete ? 'deleted' : 'deactivated');
+                showFlash(
+                    outcome === 'deleted'
+                        ? 'User account permanently deleted.'
+                        : 'User account deactivated.'
+                );
                 state.loaded.overview = false;
                 await Promise.all([loadUsers(true), loadAssignableUsers(true)]);
             } catch (error) {
                 showFlash(`User delete failed: ${error.message}`, 'err');
             } finally {
-                setButtonLoading(button, false, 'Delete');
+                setButtonLoading(button, false, isPermanentDelete ? 'Delete' : 'Deactivate');
             }
             return;
         }
@@ -1373,7 +1561,7 @@
     }
 
     async function loadAuditLogs(force = false) {
-        if (!isAdmin()) return;
+        if (!canAccessAdminViews()) return;
         if (!force && state.loaded.audit) return;
 
         renderTableLoading(els.auditBody, 5, 'Loading audit logs...');
@@ -1425,7 +1613,7 @@
     }
 
     async function loadAssignableUsers(force = false) {
-        if (!isAdmin()) {
+        if (!canAccessAdminViews()) {
             state.assignableUsers = [];
             renderAssigneeSelect(state.selectedInquiry?.assignedTo?.id || '');
             return;
