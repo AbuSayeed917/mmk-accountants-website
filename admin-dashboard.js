@@ -3,9 +3,9 @@
     const PAGE_KIND = document.body?.dataset?.pageKind === 'signin' ? 'signin' : 'dashboard';
     const DASHBOARD_MODE = document.body?.dataset?.dashboardMode === 'staff' ? 'staff' : 'admin';
     const ROUTES = {
-        signin: 'admin.html',
-        admin: 'admin-dashboard.html',
-        staff: 'staff-dashboard.html'
+        signin: '/admin',
+        admin: '/admin-dashboard',
+        staff: '/staff-dashboard'
     };
     const FLASH_KEY = 'mmk_admin_redirect_flash_v1';
     const DASHBOARD_BRANDING = {
@@ -440,7 +440,8 @@
     }
 
     function normalizeRouteName(value) {
-        const lastSegment = String(value || '')
+        const normalizedValue = String(value || '').replace(/\/+$/, '');
+        const lastSegment = normalizedValue
             .split('/')
             .pop()
             ?.split('?')[0]
